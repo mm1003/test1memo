@@ -1,0 +1,262 @@
+import React, { useState, useMemo } from 'react';
+import { Plus, Edit2, Trash2, Save, X, ArrowDownUp } from 'lucide-react';
+
+// 스티커 메모에 적용될 랜덤 파스텔 색상 목록
+const STICKY_COLORS = [
+  'bg-yellow-200',
+  'bg-pink-200',
+  'bg-blue-200',
+  'bg-green-200',
+  'bg-purple-200',
+  'bg-orange-200',
+  'bg-teal-200',
+  'bg-rose-200'
+];
+
+export default function App() {
+  // 초기 메모 상태 (노란색 스티커 기본 제공)
+  const [memos, setMemos] = useState([
+    {
+      id: 1,
+      text: '환영합니다! 🎉\n여기에 새로운 메모를 작성해보세요.\n새로 추가되는 메모는 랜덤한 색상으로 만들어집니다.',
+      color: 'bg-yellow-200',
+      createdAt: new Date().getTime(),
+      updatedAt: new Date().getTime(),
+    }
+  ]);
+
+  const [newMemoText, setNewMemoText] = useState('');
+  const [newMemoColor, setNewMemoColor] = useState(STICKY_COLORS[0]);
+  const [editingId, setEditingId] = useState(null);
+  const [editMemoText, setEditMemoText] = useState('');
+  const [editMemoColor, setEditMemoColor] = useState('');
+  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'textAsc'
+
+  // 새 메모 추가
+  const handleAddMemo = () => {
+    if (!newMemoText.trim()) return;
+
+    const newMemo = {
+      id: Date.now(),
+      text: newMemoText,
+      color: newMemoColor,
+      createdAt: new Date().getTime(),
+      updatedAt: new Date().getTime(),
+    };
+
+    setMemos([...memos, newMemo]);
+    setNewMemoText('');
+  };
+
+  // 메모 삭제
+  const handleDeleteMemo = (id) => {
+    setMemos(memos.filter(memo => memo.id !== id));
+  };
+
+  // 편집 모드 시작
+  const startEdit = (memo) => {
+    setEditingId(memo.id);
+    setEditMemoText(memo.text);
+    setEditMemoColor(memo.color);
+  };
+
+  // 편집 취소
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditMemoText('');
+    setEditMemoColor('');
+  };
+
+  // 편집 내용 저장
+  const saveEdit = (id) => {
+    if (!editMemoText.trim()) return;
+    
+    setMemos(memos.map(memo => 
+      memo.id === id 
+        ? { ...memo, text: editMemoText, color: editMemoColor, updatedAt: new Date().getTime() } 
+        : memo
+    ));
+    setEditingId(null);
+    setEditMemoText('');
+    setEditMemoColor('');
+  };
+
+  // 정렬된 메모 목록 생성
+  const sortedMemos = useMemo(() => {
+    return [...memos].sort((a, b) => {
+      if (sortBy === 'newest') return b.createdAt - a.createdAt;
+      if (sortBy === 'oldest') return a.createdAt - b.createdAt;
+      if (sortBy === 'textAsc') return a.text.localeCompare(b.text);
+      return 0;
+    });
+  }, [memos, sortBy]);
+
+  // 날짜 포맷팅 함수
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp);
+    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="min-h-screen bg-neutral-100 p-6 font-sans text-gray-800">
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        {/* 헤더 및 입력 영역 */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h1 className="text-3xl font-bold mb-6 text-gray-900 flex items-center gap-2">
+            <span className="text-2xl">📝</span> 스티커 메모
+          </h1>
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            <textarea
+              value={newMemoText}
+              onChange={(e) => setNewMemoText(e.target.value)}
+              placeholder="새로운 메모를 입력하세요..."
+              className="flex-1 min-h-[100px] p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none transition-all duration-200"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.ctrlKey) handleAddMemo();
+              }}
+            />
+            <button
+              onClick={handleAddMemo}
+              disabled={!newMemoText.trim()}
+              className="sm:w-32 h-auto py-4 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-colors duration-200"
+            >
+              <Plus size={20} />
+              <span>추가</span>
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-2 ml-1">Ctrl + Enter를 눌러 빠르게 추가할 수 있습니다.</p>
+
+          {/* 색상 선택 영역 (새 메모) */}
+          <div className="flex gap-2 mt-4 ml-1">
+            {STICKY_COLORS.map(color => (
+              <button
+                key={color}
+                onClick={() => setNewMemoColor(color)}
+                className={`w-6 h-6 rounded-full ${color} shadow-sm transition-transform hover:scale-110 ${newMemoColor === color ? 'ring-2 ring-offset-2 ring-gray-800' : ''}`}
+                title="색상 선택"
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* 컨트롤 (정렬) 영역 */}
+        <div className="flex justify-between items-center bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-100">
+          <div className="text-sm font-medium text-gray-600">
+            총 <span className="text-gray-900 font-bold">{memos.length}</span>개의 메모
+          </div>
+          <div className="flex items-center gap-2">
+            <ArrowDownUp size={16} className="text-gray-400" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-transparent border-none text-sm font-medium text-gray-700 cursor-pointer focus:ring-0"
+            >
+              <option value="newest">최신순</option>
+              <option value="oldest">오래된순</option>
+              <option value="textAsc">가나다순</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 메모 그리드 영역 */}
+        {sortedMemos.length === 0 ? (
+          <div className="text-center py-20 text-gray-400">
+            <p className="text-lg">등록된 메모가 없습니다.</p>
+            <p className="text-sm">위에서 새로운 메모를 추가해보세요!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {sortedMemos.map((memo) => (
+              <div
+                key={memo.id}
+                className={`${editingId === memo.id ? editMemoColor : memo.color} rounded-sm shadow-md hover:shadow-lg transition-shadow duration-300 p-5 flex flex-col min-h-[240px] relative group transform hover:-translate-y-1`}
+                style={{
+                  borderBottomRightRadius: '20px 20px', // 스티커 메모가 약간 말린 듯한 디테일
+                }}
+              >
+                {/* 핀/테이프 느낌의 장식 (옵션) */}
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-10 h-3 bg-white/30 rounded-sm shadow-sm backdrop-blur-sm"></div>
+
+                {editingId === memo.id ? (
+                  // 편집 모드
+                  <div className="flex-1 flex flex-col h-full mt-2">
+                    <textarea
+                      value={editMemoText}
+                      onChange={(e) => setEditMemoText(e.target.value)}
+                      className="flex-1 w-full bg-white/50 border-none rounded p-2 resize-none focus:ring-2 focus:ring-black/20 text-gray-800"
+                      autoFocus
+                    />
+                    
+                    {/* 색상 선택 영역 (편집 모드) */}
+                    <div className="flex gap-1.5 mt-3 justify-start pl-1">
+                      {STICKY_COLORS.map(color => (
+                        <button
+                          key={color}
+                          onClick={() => setEditMemoColor(color)}
+                          className={`w-5 h-5 rounded-full ${color} shadow-sm transition-all ${editMemoColor === color ? 'ring-2 ring-offset-1 ring-gray-600 scale-110' : 'opacity-50 hover:opacity-100'}`}
+                          title="색상 변경"
+                        />
+                      ))}
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-4">
+                      <button
+                        onClick={cancelEdit}
+                        className="p-2 bg-white/40 hover:bg-white/60 rounded-full transition-colors"
+                        title="취소"
+                      >
+                        <X size={16} />
+                      </button>
+                      <button
+                        onClick={() => saveEdit(memo.id)}
+                        className="p-2 bg-black/10 hover:bg-black/20 rounded-full transition-colors"
+                        title="저장"
+                      >
+                        <Save size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // 일반 보기 모드
+                  <>
+                    <div className="flex-1 mt-2">
+                      <p className="whitespace-pre-wrap break-words leading-relaxed text-gray-800">
+                        {memo.text}
+                      </p>
+                    </div>
+                    
+                    {/* 하단 영역 (날짜 및 액션 버튼) */}
+                    <div className="mt-4 flex items-end justify-between border-t border-black/5 pt-3">
+                      <div className="text-[11px] text-gray-600/80 font-medium tracking-wide">
+                        {formatDate(memo.createdAt)}
+                      </div>
+                      
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button
+                          onClick={() => startEdit(memo)}
+                          className="p-1.5 hover:bg-black/10 rounded-md transition-colors text-gray-700"
+                          title="편집"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMemo(memo.id)}
+                          className="p-1.5 hover:bg-red-500/20 hover:text-red-600 rounded-md transition-colors text-gray-700"
+                          title="삭제"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
